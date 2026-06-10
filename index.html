@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>個人績效每日記錄與統計系統</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="績效記錄">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2b579a;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --accent-color: #217346;
+            --danger-color: #d9534f;
+            --info-color: #17a2b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 15px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        header h1 { color: var(--primary-color); font-size: 24px; margin-bottom: 5px; }
+
+        .main-layout { display: block; }
+        
+        @media(min-width: 768px) {
+            .main-layout { display: grid; grid-template-columns: 360px 1fr; gap: 20px; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            font-size: 17px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .form-group { margin-bottom: 18px; }
+
+        .form-group label {
+            display: block;
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #444;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        /* 📅 網頁內嵌平鋪式日曆組件樣式 */
+        .inline-calendar {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .calendar-btn {
+            background: #f0f2f5;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .calendar-btn:active { background: #e4e7ed; }
+        .calendar-weeks {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            text-align: center;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #333;
+            background-color: #fafafa;
+            -webkit-tap-highlight-color: transparent; /* 移除手機端點擊高亮藍塊 */
+        }
+        .calendar-day.empty { background: transparent; cursor: default; }
+        .calendar-day:not(.empty):active { background: #dcdfe6; }
+        .calendar-day.today {
+            border: 2px solid var(--info-color);
+        }
+        .calendar-day.selected {
+            background-color: var(--primary-color) !important;
+            color: #fff !important;
+        }
+        .calendar-day.has-data {
+            background-color: #e8f3ff;
+            color: var(--primary-color);
+        }
+
+        .input-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .input-row span { display: block; text-align: center; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
+
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 14px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-success { background-color: var(--accent-color); }
+        .btn-info { background-color: var(--info-color); }
+        .btn-secondary { background-color: #6c757d; }
+
+        .control-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .filter-group { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+        .filter-group select { padding: 8px 12px; border-radius: 4px; width: auto; }
+
+        .export-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-sm { padding: 10px 15px; font-size: 15px; width: auto; }
+
+        .table-container { overflow-x: auto; margin-top: 10px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 16px; }
+
+        th, td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+
+        .actions-cell { display: flex; gap: 8px; }
+        .btn-text-danger {
+            color: var(--danger-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .summary-box {
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .summary-title { font-weight: bold; color: #444; margin-bottom: 12px; font-size: 16px; display: flex; justify-content: space-between; }
+        .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        @media(min-width: 480px) { .summary-grid { grid-template-columns: repeat(4, 1fr); } }
+        
+        .summary-item { background: white; padding: 12px; border-radius: 4px; border: 1px solid #e9ecef; text-align: center; }
+        .summary-item .num { font-size: 22px; font-weight: bold; color: var(--primary-color); margin: 5px 0; }
+        .summary-item .num.total { color: var(--accent-color); }
+
+        .progress-container {
+            margin-top: 15px;
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #555;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 16px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #2b579a;
+            transition: width 0.3s ease;
+        }
+        .progress-bar-fill.capped {
+            background-color: #ff9800;
+        }
+
+        .backup-zone {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .backup-zone .btn { padding: 10px; font-size: 14px; flex: 1; }
+
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 12px 26px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: bold;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.15s linear;
+            pointer-events: none;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div id="toastMessage" class="toast"></div>
+
+<div class="container">
+    <header>
+        <h1>個人績效每日記錄與統計系統</h1>
+        <p>📋 點擊數字直接選取 • 免確認無彈窗干擾 • 門檻每日清零 • 月度800封頂</p>
+    </header>
+
+    <div class="main-layout">
+        <div class="left-col">
+            <div class="card">
+                <h2>📅 選擇日期（點擊數字直選）</h2>
+                
+                <div class="inline-calendar">
+                    <div class="calendar-header">
+                        <button type="button" class="calendar-btn" id="prevMonthBtn">◀</button>
+                        <span id="calendarMonthTitle"></span>
+                        <button type="button" class="calendar-btn" id="nextMonthBtn">▶</button>
+                    </div>
+                    <div class="calendar-weeks">
+                        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                    </div>
+                    <div class="calendar-days" id="calendarDaysContainer"></div>
+                </div>
+
+                <form id="recordForm">
+                    <div class="form-group">
+                        <label id="inputSectionTitle">今日實際數量</label>
+                        <div class="input-row">
+                            <div>
+                                <span>普通</span>
+                                <input type="number" id="cat1" min="0" value="0" required>
+                            </div>
+                            <div>
+                                <span>隔離</span>
+                                <input type="number" id="cat2" min="0" value="0" required>
+                            </div>
+                            <div>
+                                <span>生物銀</span>
+                                <input type="number" id="cat3" min="0" value="0" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">💾 保存/更新此日記錄</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>📊 當月即時看板 (月度封頂)</h2>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label for="summaryMonthSelect" style="font-size:14px;">選擇查看月份：</label>
+                    <select id="summaryMonthSelect"></select>
+                </div>
+                <div id="monthSummaryView"></div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ 系統數據備份</h2>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">防範瀏覽器清理快取，建議定期下載備份文件。</p>
+                <div class="backup-zone">
+                    <button id="btnDownloadBackup" class="btn btn-info">🔵 下載數據備份</button>
+                    <button id="btnTriggerImport" class="btn btn-secondary">⚪ 導入備份數據</button>
+                </div>
+                <input type="file" id="fileImportInput" accept=".json" style="display: none;">
+            </div>
+        </div>
+
+        <div class="right-col">
+            <div class="card" style="min-height: 500px;">
+                <h2>📋 歷史每日記錄明細</h2>
+                
+                <div class="control-bar">
+                    <div class="filter-group">
+                        <label for="filterMonth">篩選列表:</label>
+                        <select id="filterMonth">
+                            <option value="all">查看全部歷史明細</option>
+                        </select>
+                    </div>
+                    <div class="export-btns">
+                        <button id="btnExportMonth" class="btn btn-sm btn-success">🟢 導出當月 Excel</button>
+                        <button id="btnExportYear" class="btn btn-sm btn-success">🟢 導出全年彙總</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>具體日期</th>
+                                <th>普通</th>
+                                <th>隔離</th>
+                                <th>生物銀</th>
+                                <th style="width: 70px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 專屬穩定數據鏈路庫
+    let records = JSON.parse(localStorage.getItem('perf_records_v17_pure')) || [];
+
+    const recordForm = document.getElementById('recordForm');
+    const cat1Input = document.getElementById('cat1');
+    const cat2Input = document.getElementById('cat2');
+    const cat3Input = document.getElementById('cat3');
+    const inputSectionTitle = document.getElementById('inputSectionTitle');
+    const recordsTbody = document.getElementById('recordsTbody');
+    const filterMonthSelect = document.getElementById('filterMonth');
+    const summaryMonthSelect = document.getElementById('summaryMonthSelect');
+    const monthSummaryView = document.getElementById('monthSummaryView');
+    const btnExportMonth = document.getElementById('btnExportMonth');
+    const btnExportYear = document.getElementById('btnExportYear');
+    const btnDownloadBackup = document.getElementById('btnDownloadBackup');
+    const btnTriggerImport = document.getElementById('btnTriggerImport');
+    const fileImportInput = document.getElementById('fileImportInput');
+    const toastMessage = document.getElementById('toastMessage');
+
+    const calendarMonthTitle = document.getElementById('calendarMonthTitle');
+    const calendarDaysContainer = document.getElementById('calendarDaysContainer');
+    const prevMonthBtn = document.getElementById('prevMonthBtn');
+    const nextMonthBtn = document.getElementById('nextMonthBtn');
+
+    // 核心狀態初始化
+    let currentSelectedDate = ""; 
+    let calendarYear = new Date().getFullYear();
+    let calendarMonth = new Date().getMonth(); 
+
+    const initDate = new Date();
+    currentSelectedDate = `${initDate.getFullYear()}-${String(initDate.getMonth() + 1).padStart(2, '0')}-${String(initDate.getDate()).padStart(2, '0')}`;
+    calendarYear = initDate.getFullYear();
+    calendarMonth = initDate.getMonth();
+
+    function showToast(text) {
+        toastMessage.innerText = text;
+        toastMessage.classList.add('show');
+        setTimeout(() => { toastMessage.classList.remove('show'); }, 1000);
+    }
+
+    function getDailySingleScore(count, type) {
+        count = parseFloat(count) || 0;
+        if (type === 1) return count <= 17 ? 0 : (count - 17) * 2;
+        if (type === 2) return count <= 30 ? 0 : (count - 30) * 3;
+        if (type === 3) return count <= 4 ? 0 : (count - 4) * 3;
+        return 0;
+    }
+
+    // 💡 徹底重構日曆生成邏輯：綁定最簡單可靠的直接點擊，點擊立即成功切換
+    function renderInlineCalendar() {
+        calendarMonthTitle.innerText = `${calendarYear}年 ${calendarMonth + 1}月`;
+        calendarDaysContainer.innerHTML = '';
+
+        const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
+        const totalDays = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+
+        // 1. 填充月前空白
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'calendar-day empty';
+            calendarDaysContainer.appendChild(emptyDiv);
+        }
+
+        // 2. 構建並渲染日期數字
+        const todayStr = new Date().toISOString().slice(0, 10);
+        for (let day = 1; day <= totalDays; day++) {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'calendar-day';
+            dayDiv.innerText = day;
+
+            const thisDateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            if (thisDateStr === todayStr) dayDiv.classList.add('today');
+
+            const hasData = records.some(r => r.date === thisDateStr);
+            if (hasData) dayDiv.classList.add('has-data');
+
+            if (thisDateStr === currentSelectedDate) dayDiv.classList.add('selected');
+
+            // ⚡ 核心優化：最純粹的直接點擊事件，不走任何中間跳轉，一觸即達！
+            dayDiv.onclick = function() {
+                currentSelectedDate = thisDateStr;
+                syncInputsFromDate();
+                renderInlineCalendar(); // 刷新選中高亮
+            };
+
+            calendarDaysContainer.appendChild(dayDiv);
+        }
+    }
+
+    prevMonthBtn.onclick = function() {
+        calendarMonth--;
+        if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+        renderInlineCalendar();
+    };
+
+    nextMonthBtn.onclick = function() {
+        calendarMonth++;
+        if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+        renderInlineCalendar();
+    };
+
+    // 同步輸入框
+    function syncInputsFromDate() {
+        const existing = records.find(r => r.date === currentSelectedDate);
+        if (existing) {
+            cat1Input.value = existing.cat1;
+            cat2Input.value = existing.cat2;
+            cat3Input.value = existing.cat3;
+            inputSectionTitle.innerHTML = `📝 修改 <span style="color:var(--danger-color); font-weight:bold;">${currentSelectedDate}</span> 的已有數據`;
+        } else {
+            cat1Input.value = 0;
+            cat2Input.value = 0;
+            cat3Input.value = 0;
+            inputSectionTitle.innerHTML = `✨ 錄入 <span style="color:var(--primary-color); font-weight:bold;">${currentSelectedDate}</span> 的新數據`;
+        }
+    }
+
+    function updateMonthOptions() {
+        const months = new Set();
+        const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+        months.add(currentMonthStr);
+
+        records.forEach(r => { if (r.date) months.add(r.date.substring(0, 7)); });
+        const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+
+        const prevFilter = filterMonthSelect.value;
+        const prevSummary = summaryMonthSelect.value;
+
+        filterMonthSelect.innerHTML = '<option value="all">查看全部歷史明細</option>';
+        summaryMonthSelect.innerHTML = '';
+
+        sortedMonths.forEach(m => {
+            filterMonthSelect.innerHTML += `<option value="${m}">${m} 月明細</option>`;
+            summaryMonthSelect.innerHTML += `<option value="${m}">${m} 月</option>`;
+        });
+
+        filterMonthSelect.value = [...filterMonthSelect.options].some(o => o.value === prevFilter) ? prevFilter : currentMonthStr;
+        summaryMonthSelect.value = [...summaryMonthSelect.options].some(o => o.value === prevSummary) ? prevSummary : currentMonthStr;
+    }
+
+    // 保存數據 (無任何彈窗)
+    recordForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const c1 = parseInt(cat1Input.value) || 0;
+        const c2 = parseInt(cat2Input.value) || 0;
+        const c3 = parseInt(cat3Input.value) || 0;
+
+        const existingIndex = records.findIndex(r => r.date === currentSelectedDate);
+        if (existingIndex > -1) {
+            records[existingIndex] = { date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 };
+        } else {
+            records.push({ date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 });
+        }
+
+        records.sort((a, b) => b.date.localeCompare(a.date));
+        localStorage.setItem('perf_records_v17_pure', JSON.stringify(records));
+
+        updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
+        showToast('💾 數據儲存成功！');
+    });
+
+    window.deleteRecord = function(date) {
+        if(confirm(`確定要徹底刪除 ${date} 的記錄嗎？`)) {
+            records = records.filter(r => r.date !== date);
+            localStorage.setItem('perf_records_v17_pure', JSON.stringify(records));
+            updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
+            showToast('🗑️ 記錄已刪除');
+        }
+    }
+
+    function renderTable() {
+        const filterVal = filterMonthSelect.value;
+        recordsTbody.innerHTML = '';
+        const filtered = records.filter(r => filterVal === 'all' || r.date.startsWith(filterVal));
+
+        if(filtered.length === 0) {
+            recordsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding:30px;">暫無明細記錄</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(r => {
+            recordsTbody.innerHTML += `
+                <tr>
+                    <td><strong>${r.date}</strong></td>
+                    <td>${r.cat1} 個</td>
+                    <td>${r.cat2} 個</td>
+                    <td>${r.cat3} 個</td>
+                    <td class="actions-cell"><button class="btn-text-danger" onclick="deleteRecord('${r.date}')">刪除</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    function renderSummary() {
+        const targetMonth = summaryMonthSelect.value; if (!targetMonth) return;
+        let totalCount1 = 0, totalCount2 = 0, totalCount3 = 0;
+        let totalScoreSum = 0;
+        let days = 0;
+
+        records.forEach(r => {
+            if(r.date && r.date.startsWith(targetMonth)) {
+                totalCount1 += r.cat1;
+                totalCount2 += r.cat2;
+                totalCount3 += r.cat3;
+                
+                totalScoreSum += getDailySingleScore(r.cat1, 1);
+                totalScoreSum += getDailySingleScore(r.cat2, 2);
+                totalScoreSum += getDailySingleScore(r.cat3, 3);
+                days++;
+            }
+        });
+
+        const capLimit = 800;
+        let percent = ((totalScoreSum / capLimit) * 100).toFixed(1);
+        let progressSubText = "";
+        let isCappedClass = "";
+
+        if (totalScoreSum >= capLimit) {
+            percent = 100;
+            progressSubText = "🎉 已達成封頂上限！";
+            isCappedClass = "capped";
+        } else {
+            progressSubText = `還差 ${capLimit - totalScoreSum} 分封頂`;
+        }
+
+        monthSummaryView.innerHTML = `
+            <div class="summary-box">
+                <div class="summary-title"><span>📅 ${targetMonth} 彙總看板</span><span style="font-size:13px; font-weight:normal; color:#666;">已記 ${days} 天</span></div>
+                <div class="summary-grid">
+                    <div class="summary-item"><div>普通總數</div><div class="num">${totalCount1}</div></div>
+                    <div class="summary-item"><div>隔離總數</div><div class="num">${totalCount2}</div></div>
+                    <div class="summary-item"><div>生物銀總數</div><div class="num">${totalCount3}</div></div>
+                    <div class="summary-item" style="background:#eefaf2; border-color:#c3ebd3;"><div style="color:var(--accent-color);font-size:12px;font-weight:bold;">✨ 月總績效</div><div class="num total">${totalScoreSum}</div></div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-text">
+                        <span>封頂進度 (${percent}%)</span>
+                        <span>${progressSubText}</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill ${isCappedClass}" style="width: ${percent}%;"></div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    // 導出 Excel
+    function exportToExcelMode(mode) {
+        if (records.length === 0) { alert('暫無任何績效數據可供導出！'); return; }
+        const targetMonth = summaryMonthSelect.value;
+        const targetYear = targetMonth.substring(0, 4);
+
+        if (mode === 'month') {
+            const dailyRows = records.filter(r => r.date.startsWith(targetMonth)).sort((a,b) => a.date.localeCompare(b.date));
+            if (dailyRows.length === 0) { alert(`沒有找到 ${targetMonth} 月的數據！`); return; }
+
+            let sheet1Data = [
+                [`${targetMonth} 月度每日記錄及每日績效明細表 (每月800分封頂)`],
+                [],
+                ['具體日期', '普通數量(個)', '普通當日績效', '隔離數量(個)', '隔離當日績效', '生物銀數量(個)', '生物銀當日績效', '當日總績效']
+            ];
+
+            let sumC1=0, sumS1=0, sumC2=0, sumS2=0, sumC3=0, sumS3=0, sumTotal=0;
+
+            dailyRows.forEach(r => {
+                let s1 = getDailySingleScore(r.cat1, 1);
+                let s2 = getDailySingleScore(r.cat2, 2);
+                let s3 = getDailySingleScore(r.cat3, 3);
+                let dayTotal = s1 + s2 + s3;
+
+                sheet1Data.push([r.date, r.cat1, s1, r.cat2, s2, r.cat3, s3, dayTotal]);
+
+                sumC1 += r.cat1; sumS1 += s1;
+                sumC2 += r.cat2; sumS2 += s2;
+                sumC3 += r.cat3; sumS3 += s3;
+                sumTotal += dayTotal;
+            });
+
+            sheet1Data.push([]);
+            sheet1Data.push(['【全月大計(未封頂前)】', sumC1, sumS1, sumC2, sumS2, sumC3, sumS3, sumTotal]);
+            sheet1Data.push(['【實際發放(800封頂控制)】', '-', '-', '-', '-', '-', '-', Math.min(800, sumTotal)]);
+
+            let sheet2Data = [
+                [`${targetMonth} 月度結算統計彙總`],
+                [],
+                ['指標大類', '全月累計總個數', '計分考核規則 (每日清零獨立算)', '全月累計獲得總績效分'],
+                ['普通指標', sumC1, '每日門檻 17 個，超過部分每個 × 2 分', sumS1],
+                ['隔離指標', sumC2, '每日門檻 30 個，超過部分每個 × 3 分', sumS2],
+                ['生物銀指標', sumC3, '每日門檻 4 個，超過部分每個 × 3 分', sumS3],
+                ['【全月考核總得分】', sumC1 + sumC2 + sumC3, '各品類每日扣除門檻後的累計大總計', sumTotal],
+                ['【月度封頂實際發放】', '-', '每月最高核算發放 800 分值', Math.min(800, sumTotal)]
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1Data), `${targetMonth}每日明細`);
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2Data), `${targetMonth}績效彙總`);
+            XLSX.writeFile(wb, `月度績效報表_${targetMonth}.xlsx`);
+
+        } else {
+            let monthGroups = {};
+            records.forEach(r => {
+                if(r.date && r.date.startsWith(targetYear)) {
+                    const m = r.date.substring(0, 7);
+                    if (!monthGroups[m]) monthGroups[m] = { c1: 0, s1: 0, c2: 0, s2: 0, c3: 0, s3: 0, days: 0 };
+                    
+                    monthGroups[m].c1 += r.cat1;
+                    monthGroups[m].s1 += getDailySingleScore(r.cat1, 1);
+                    monthGroups[m].c2 += r.cat2;
+                    monthGroups[m].s2 += getDailySingleScore(r.cat2, 2);
+                    monthGroups[m].c3 += r.cat3;
+                    monthGroups[m].s3 += getDailySingleScore(r.cat3, 3);
+                    monthGroups[m].days++;
+                }
+            });
+
+            const sortedMonths = Object.keys(monthGroups).sort();
+            if (sortedMonths.length === 0) { alert(`沒有找到 ${targetYear} 年的績效數據！`); return; }
+
+            let sheetData = [
+                [`${targetYear} 全年按月度績效彙總大表 (含封頂控制)`],
+                [],
+                ['歸屬月份', '已錄天數', '普通總個數', '隔離總個數', '生物銀總個數', '實際考核總分', '800封頂後發放分']
+            ];
+
+            let y_c1=0, y_c2=0, y_c3=0, y_total_raw=0, y_total_capped=0;
+
+            sortedMonths.forEach(m => {
+                const g = monthGroups[m];
+                const m_raw_score = g.s1 + g.s2 + g.s3;
+                const m_capped_score = Math.min(800, m_raw_score);
+
+                sheetData.push([m, g.days + '天', g.c1, g.c2, g.c3, m_raw_score, m_capped_score]);
+
+                y_c1+=g.c1; y_c2+=g.c2; y_c3+=g.c3; 
+                y_total_raw+=m_raw_score; y_total_capped+=m_capped_score;
+            });
+
+            sheetData.push([]);
+            sheetData.push(['【全年總累計】', '-', y_c1, y_c2, y_c3, y_total_raw, y_total_capped]);
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetData), `${targetYear}全年彙總`);
+            XLSX.writeFile(wb, `年度績效彙總表_${targetYear}.xlsx`);
+        }
+    }
+
+    // 備份下載
+    btnDownloadBackup.onclick = function() {
+        if (records.length === 0) { alert('當前沒有任何數據可供下載備份！'); return; }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `績效備份_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    };
+
+    // 備份導入
+    btnTriggerImport.onclick = () => fileImportInput.click();
+    fileImportInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const importedData = JSON.parse(evt.target.result);
+                if (Array.isArray(importedData)) {
+                    if (confirm(`讀取成功！檢測到 ${importedData.length} 條歷史記錄。確定要合併導入嗎？`)) {
+                        importedData.forEach(imp => {
+                            const idx = records.findIndex(r => r.date === imp.date);
+                            if (idx > -1) records[idx] = imp;
+                            else records.push(imp);
+                        });
+                        records.sort((a, b) => b.date.localeCompare(a.date));
+                        localStorage.setItem('perf_records_v17_pure', JSON.stringify(records));
+                        updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
+                        showToast('📥 備份導入成功！');
+                    }
+                } else { alert('文件格式不正確！'); }
+            } catch (err) { alert('導入失敗，請確認文件！'); }
+        };
+        reader.readAsText(file);
+    };
+    
+    filterMonthSelect.onchange = renderTable;
+    summaryMonthSelect.onchange = renderSummary;
+    btnExportMonth.onclick = () => exportToExcelMode('month');
+    btnExportYear.onclick = () => exportToExcelMode('year');
+
+    // 初始化驅動
+    updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
+</script>
+</body>
+</html>
