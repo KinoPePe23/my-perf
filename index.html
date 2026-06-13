@@ -86,6 +86,18 @@
             outline: none;
         }
 
+        /* 📊 新增公式提示框樣式 */
+        .formula-tip {
+            background-color: #e8f3ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 10px;
+            font-size: 13px;
+            color: #385d8a;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
         /* 📅 網頁內嵌平鋪式日曆組件樣式 */
         .inline-calendar {
             border: 1px solid var(--border-color);
@@ -134,7 +146,7 @@
             cursor: pointer;
             color: #333;
             background-color: #fafafa;
-            -webkit-tap-highlight-color: transparent; /* 移除手機端點擊高亮藍塊 */
+            -webkit-tap-highlight-color: transparent;
         }
         .calendar-day.empty { background: transparent; cursor: default; }
         .calendar-day:not(.empty):active { background: #dcdfe6; }
@@ -285,7 +297,7 @@
 <div class="container">
     <header>
         <h1>個人績效每日記錄與統計系統</h1>
-        <p>📋 點擊數字直接選取 • 免確認無彈窗干擾 • 門檻每日清零 • 月度800封頂</p>
+        <p>📋 點擊數字直接選取 • 免確認無彈窗干擾 • 疊加累計混合計分 • 月度800封頂</p>
     </header>
 
     <div class="main-layout">
@@ -303,6 +315,13 @@
                         <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
                     </div>
                     <div class="calendar-days" id="calendarDaysContainer"></div>
+                </div>
+
+                <div class="formula-tip">
+                    <strong>💡 當日計分公式說明：</strong><br>
+                    1. 總普通數 = 普通 + 隔離 + 生物銀<br>
+                    2. 基礎分 = (總普通數 > 17) ? (總普通數 - 17) × 2 : 0<br>
+                    3. 專屬加分 = (隔離超過30個每個+3分) + (生物銀超過4個每個+3分)
                 </div>
 
                 <form id="recordForm">
@@ -339,7 +358,7 @@
 
             <div class="card">
                 <h2>⚙️ 系統數據備份</h2>
-                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">防範瀏覽器清理快取，建議定期下載備份文件。</p>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">防範 GitHub 或瀏覽器清理快取，建議定期下載備份文件。</p>
                 <div class="backup-zone">
                     <button id="btnDownloadBackup" class="btn btn-info">🔵 下載數據備份</button>
                     <button id="btnTriggerImport" class="btn btn-secondary">⚪ 導入備份數據</button>
@@ -385,8 +404,8 @@
 </div>
 
 <script>
-    // 專屬穩定數據鏈路庫
-    let records = JSON.parse(localStorage.getItem('perf_records_v17_pure')) || [];
+    // 數據存儲（採用全新的儲存鍵名，確保乾淨且不衝突）
+    let records = JSON.parse(localStorage.getItem('perf_records_v19_hybrid')) || [];
 
     const recordForm = document.getElementById('recordForm');
     const cat1Input = document.getElementById('cat1');
@@ -409,7 +428,7 @@
     const prevMonthBtn = document.getElementById('prevMonthBtn');
     const nextMonthBtn = document.getElementById('nextMonthBtn');
 
-    // 核心狀態初始化
+    // 狀態管理初始化
     let currentSelectedDate = ""; 
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth(); 
@@ -425,15 +444,37 @@
         setTimeout(() => { toastMessage.classList.remove('show'); }, 1000);
     }
 
-    function getDailySingleScore(count, type) {
-        count = parseFloat(count) || 0;
-        if (type === 1) return count <= 17 ? 0 : (count - 17) * 2;
-        if (type === 2) return count <= 30 ? 0 : (count - 30) * 3;
-        if (type === 3) return count <= 4 ? 0 : (count - 4) * 3;
-        return 0;
+    // 🧮 核心升級：全新混合疊加計分引擎
+    function calculateDailyScoreDetail(c1, c2, c3) {
+        c1 = parseFloat(c1) || 0;
+        c2 = parseFloat(c2) || 0;
+        c3 = parseFloat(c3) || 0;
+
+        // 1. 隔離和生物銀無條件全部疊加到「普通總數」中
+        const combinedTotal = c1 + c2 + c3;
+        
+        // 2. 計算普通基礎分（門檻 17，超過每個 2 分）
+        const baseNormalScore = combinedTotal <= 17 ? 0 : (combinedTotal - 17) * 2;
+
+        // 3. 計算隔離專屬加分（門檻 30，超過每個額外 3 分）
+        const isolationBonus = c2 <= 30 ? 0 : (c2 - 30) * 3;
+
+        // 4. 計算生物銀專屬加分（門檻 4，超過每個額外 3 分）
+        const silverBonus = c3 <= 4 ? 0 : (c3 - 4) * 3;
+
+        // 當日大總計
+        const dayTotal = baseNormalScore + isolationBonus + silverBonus;
+
+        return {
+            combinedTotal: combinedTotal,
+            baseNormalScore: baseNormalScore,
+            isolationBonus: isolationBonus,
+            silverBonus: silverBonus,
+            dayTotal: dayTotal
+        };
     }
 
-    // 💡 徹底重構日曆生成邏輯：綁定最簡單可靠的直接點擊，點擊立即成功切換
+    // 日曆渲染
     function renderInlineCalendar() {
         calendarMonthTitle.innerText = `${calendarYear}年 ${calendarMonth + 1}月`;
         calendarDaysContainer.innerHTML = '';
@@ -441,14 +482,12 @@
         const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
         const totalDays = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
-        // 1. 填充月前空白
         for (let i = 0; i < firstDayIndex; i++) {
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'calendar-day empty';
             calendarDaysContainer.appendChild(emptyDiv);
         }
 
-        // 2. 構建並渲染日期數字
         const todayStr = new Date().toISOString().slice(0, 10);
         for (let day = 1; day <= totalDays; day++) {
             const dayDiv = document.createElement('div');
@@ -464,11 +503,10 @@
 
             if (thisDateStr === currentSelectedDate) dayDiv.classList.add('selected');
 
-            // ⚡ 核心優化：最純粹的直接點擊事件，不走任何中間跳轉，一觸即達！
             dayDiv.onclick = function() {
                 currentSelectedDate = thisDateStr;
                 syncInputsFromDate();
-                renderInlineCalendar(); // 刷新選中高亮
+                renderInlineCalendar(); 
             };
 
             calendarDaysContainer.appendChild(dayDiv);
@@ -487,7 +525,6 @@
         renderInlineCalendar();
     };
 
-    // 同步輸入框
     function syncInputsFromDate() {
         const existing = records.find(r => r.date === currentSelectedDate);
         if (existing) {
@@ -526,7 +563,6 @@
         summaryMonthSelect.value = [...summaryMonthSelect.options].some(o => o.value === prevSummary) ? prevSummary : currentMonthStr;
     }
 
-    // 保存數據 (無任何彈窗)
     recordForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const c1 = parseInt(cat1Input.value) || 0;
@@ -541,7 +577,7 @@
         }
 
         records.sort((a, b) => b.date.localeCompare(a.date));
-        localStorage.setItem('perf_records_v17_pure', JSON.stringify(records));
+        localStorage.setItem('perf_records_v19_hybrid', JSON.stringify(records));
 
         updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
         showToast('💾 數據儲存成功！');
@@ -550,7 +586,7 @@
     window.deleteRecord = function(date) {
         if(confirm(`確定要徹底刪除 ${date} 的記錄嗎？`)) {
             records = records.filter(r => r.date !== date);
-            localStorage.setItem('perf_records_v17_pure', JSON.stringify(records));
+            localStorage.setItem('perf_records_v19_hybrid', JSON.stringify(records));
             updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
             showToast('🗑️ 記錄已刪除');
         }
@@ -591,9 +627,9 @@
                 totalCount2 += r.cat2;
                 totalCount3 += r.cat3;
                 
-                totalScoreSum += getDailySingleScore(r.cat1, 1);
-                totalScoreSum += getDailySingleScore(r.cat2, 2);
-                totalScoreSum += getDailySingleScore(r.cat3, 3);
+                // 採用最新算法累加月總績效
+                let res = calculateDailyScoreDetail(r.cat1, r.cat2, r.cat3);
+                totalScoreSum += res.dayTotal;
                 days++;
             }
         });
@@ -615,10 +651,10 @@
             <div class="summary-box">
                 <div class="summary-title"><span>📅 ${targetMonth} 彙總看板</span><span style="font-size:13px; font-weight:normal; color:#666;">已記 ${days} 天</span></div>
                 <div class="summary-grid">
-                    <div class="summary-item"><div>普通總數</div><div class="num">${totalCount1}</div></div>
-                    <div class="summary-item"><div>隔離總數</div><div class="num">${totalCount2}</div></div>
-                    <div class="summary-item"><div>生物銀總數</div><div class="num">${totalCount3}</div></div>
-                    <div class="summary-item" style="background:#eefaf2; border-color:#c3ebd3;"><div style="color:var(--accent-color);font-size:12px;font-weight:bold;">✨ 月總績效</div><div class="num total">${totalScoreSum}</div></div>
+                    <div class="summary-item"><div>普通累計</div><div class="num">${totalCount1}</div></div>
+                    <div class="summary-item"><div>隔離累計</div><div class="num">${totalCount2}</div></div>
+                    <div class="summary-item"><div>生物銀累計</div><div class="num">${totalCount3}</div></div>
+                    <div class="summary-item" style="background:#fff9e6; border-color:#ffe699;"><div style="color:#b27a00;font-size:12px;font-weight:bold;">✨ 月總績效</div><div class="num total" style="color:#cc8800;">${totalScoreSum}</div></div>
                 </div>
 
                 <div class="progress-container">
@@ -633,7 +669,7 @@
             </div>`;
     }
 
-    // 導出 Excel
+    // 導出 Excel (包含完整複合拆解細節)
     function exportToExcelMode(mode) {
         if (records.length === 0) { alert('暫無任何績效數據可供導出！'); return; }
         const targetMonth = summaryMonthSelect.value;
@@ -644,60 +680,59 @@
             if (dailyRows.length === 0) { alert(`沒有找到 ${targetMonth} 月的數據！`); return; }
 
             let sheet1Data = [
-                [`${targetMonth} 月度每日記錄及每日績效明細表 (每月800分封頂)`],
+                [`${targetMonth} 月度每日記錄及混合疊加績效明細表 (每月800分封頂)`],
                 [],
-                ['具體日期', '普通數量(個)', '普通當日績效', '隔離數量(個)', '隔離當日績效', '生物銀數量(個)', '生物銀當日績效', '當日總績效']
+                ['具體日期', '普通(個)', '隔離(個)', '生物銀(個)', '總普通數(三者相加)', '普通基礎績效', '隔離專屬加分', '生物銀專屬加分', '當日總績效']
             ];
 
-            let sumC1=0, sumS1=0, sumC2=0, sumS2=0, sumC3=0, sumS3=0, sumTotal=0;
+            let sumC1=0, sumC2=0, sumC3=0, sumComb=0, sumBaseNorm=0, sumIso=0, sumSil=0, sumTotal=0;
 
             dailyRows.forEach(r => {
-                let s1 = getDailySingleScore(r.cat1, 1);
-                let s2 = getDailySingleScore(r.cat2, 2);
-                let s3 = getDailySingleScore(r.cat3, 3);
-                let dayTotal = s1 + s2 + s3;
+                let res = calculateDailyScoreDetail(r.cat1, r.cat2, r.cat3);
 
-                sheet1Data.push([r.date, r.cat1, s1, r.cat2, s2, r.cat3, s3, dayTotal]);
+                sheet1Data.push([
+                    r.date, r.cat1, r.cat2, r.cat3, 
+                    res.combinedTotal, res.baseNormalScore, res.isolationBonus, res.silverBonus, res.dayTotal
+                ]);
 
-                sumC1 += r.cat1; sumS1 += s1;
-                sumC2 += r.cat2; sumS2 += s2;
-                sumC3 += r.cat3; sumS3 += s3;
-                sumTotal += dayTotal;
+                sumC1 += r.cat1; sumC2 += r.cat2; sumC3 += r.cat3;
+                sumComb += res.combinedTotal; sumBaseNorm += res.baseNormalScore;
+                sumIso += res.isolationBonus; sumSil += res.silverBonus;
+                sumTotal += res.dayTotal;
             });
 
             sheet1Data.push([]);
-            sheet1Data.push(['【全月大計(未封頂前)】', sumC1, sumS1, sumC2, sumS2, sumC3, sumS3, sumTotal]);
-            sheet1Data.push(['【實際發放(800封頂控制)】', '-', '-', '-', '-', '-', '-', Math.min(800, sumTotal)]);
+            sheet1Data.push(['【全月大計(未封頂前)】', sumC1, sumC2, sumC3, sumComb, sumBaseNorm, sumIso, sumSil, sumTotal]);
+            sheet1Data.push(['【實際發放(800封頂控制)】', '-', '-', '-', '-', '-', '-', '-', Math.min(800, sumTotal)]);
 
             let sheet2Data = [
-                [`${targetMonth} 月度結算統計彙總`],
+                [`${targetMonth} 月度考核規則審計彙總`],
                 [],
-                ['指標大類', '全月累計總個數', '計分考核規則 (每日清零獨立算)', '全月累計獲得總績效分'],
-                ['普通指標', sumC1, '每日門檻 17 個，超過部分每個 × 2 分', sumS1],
-                ['隔離指標', sumC2, '每日門檻 30 個，超過部分每個 × 3 分', sumS2],
-                ['生物銀指標', sumC3, '每日門檻 4 個，超過部分每個 × 3 分', sumS3],
-                ['【全月考核總得分】', sumC1 + sumC2 + sumC3, '各品類每日扣除門檻後的累計大總計', sumTotal],
-                ['【月度封頂實際發放】', '-', '每月最高核算發放 800 分值', Math.min(800, sumTotal)]
+                ['指標大類', '全月累計個數', '新制混合計分考核規則', '全月累計得分'],
+                ['普通基礎大類', sumComb, '三品類大團結相加，每日滿 17 個後，超額部分每個 × 2 分', sumBaseNorm],
+                ['隔離專屬加分', sumC2, '每日獨立滿 30 個後，超額部分每個額外額外 × 3 分', sumIso],
+                ['生物銀專屬加分', sumC3, '每日獨立滿 4 個後，超額部分每個額外額外 × 3 分', sumSil],
+                ['【全月核算總得分】', '-', '各項符合規則加總後的大總計', sumTotal],
+                ['【月度封頂實際發放】', '-', '每月封頂控制最高核算 800 分值', Math.min(800, sumTotal)]
             ];
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1Data), `${targetMonth}每日明細`);
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2Data), `${targetMonth}績效彙總`);
-            XLSX.writeFile(wb, `月度績效報表_${targetMonth}.xlsx`);
+            XLSX.writeFile(wb, `升級版月度績效報表_${targetMonth}.xlsx`);
 
         } else {
             let monthGroups = {};
             records.forEach(r => {
                 if(r.date && r.date.startsWith(targetYear)) {
                     const m = r.date.substring(0, 7);
-                    if (!monthGroups[m]) monthGroups[m] = { c1: 0, s1: 0, c2: 0, s2: 0, c3: 0, s3: 0, days: 0 };
+                    if (!monthGroups[m]) monthGroups[m] = { c1: 0, c2: 0, c3: 0, totalRaw: 0, days: 0 };
                     
+                    let res = calculateDailyScoreDetail(r.cat1, r.cat2, r.cat3);
                     monthGroups[m].c1 += r.cat1;
-                    monthGroups[m].s1 += getDailySingleScore(r.cat1, 1);
                     monthGroups[m].c2 += r.cat2;
-                    monthGroups[m].s2 += getDailySingleScore(r.cat2, 2);
                     monthGroups[m].c3 += r.cat3;
-                    monthGroups[m].s3 += getDailySingleScore(r.cat3, 3);
+                    monthGroups[m].totalRaw += res.dayTotal;
                     monthGroups[m].days++;
                 }
             });
@@ -708,20 +743,19 @@
             let sheetData = [
                 [`${targetYear} 全年按月度績效彙總大表 (含封頂控制)`],
                 [],
-                ['歸屬月份', '已錄天數', '普通總個數', '隔離總個數', '生物銀總個數', '實際考核總分', '800封頂後發放分']
+                ['歸屬月份', '已錄天數', '普通總個數', '隔離總個數', '生物銀總個數', '混合計算原始總分', '800封頂後發放分']
             ];
 
             let y_c1=0, y_c2=0, y_c3=0, y_total_raw=0, y_total_capped=0;
 
             sortedMonths.forEach(m => {
                 const g = monthGroups[m];
-                const m_raw_score = g.s1 + g.s2 + g.s3;
-                const m_capped_score = Math.min(800, m_raw_score);
+                const m_capped_score = Math.min(800, g.totalRaw);
 
-                sheetData.push([m, g.days + '天', g.c1, g.c2, g.c3, m_raw_score, m_capped_score]);
+                sheetData.push([m, g.days + '天', g.c1, g.c2, g.c3, g.totalRaw, m_capped_score]);
 
                 y_c1+=g.c1; y_c2+=g.c2; y_c3+=g.c3; 
-                y_total_raw+=m_raw_score; y_total_capped+=m_capped_score;
+                y_total_raw+=g.totalRaw; y_total_capped+=m_capped_score;
             });
 
             sheetData.push([]);
@@ -739,7 +773,7 @@
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `績效備份_${new Date().toISOString().slice(0,10)}.json`);
+        downloadAnchor.setAttribute("download", `績效混合計分備份_${new Date().toISOString().slice(0,10)}.json`);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
@@ -762,7 +796,7 @@
                             else records.push(imp);
                         });
                         records.sort((a, b) => b.date.localeCompare(a.date));
-                        localStorage.setItem('perf_records_v17_pure', JSON.stringify(records));
+                        localStorage.setItem('perf_records_v19_hybrid', JSON.stringify(records));
                         updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
                         showToast('📥 備份導入成功！');
                     }
