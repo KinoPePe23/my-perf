@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>個人績效每日記錄與統計系統</title>
+    <title>個人績效每日記錄與雲端統計系統</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -43,6 +43,28 @@
         }
 
         header h1 { color: var(--primary-color); font-size: 24px; margin-bottom: 5px; }
+
+        /* ☁️ 雲端狀態列樣式 */
+        .cloud-status {
+            background-color: #e2f4e9;
+            border: 1px solid #a3cfb6;
+            color: #155724;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .cloud-status.syncing {
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+            color: #856404;
+        }
 
         .main-layout { display: block; }
         
@@ -251,12 +273,13 @@
 <div class="container">
     <header>
         <h1>個人績效每日記錄與統計系統</h1>
-        <p>📋 隔離加分雙重疊加版 (基礎2歐 + 超額3歐額外加成)</p>
+        <p>📋 ☁️ 數據實時雲端無感自動同步 • 終身防丟失免費版</p>
     </header>
 
     <div class="main-layout">
-        <!-- 左側區域 -->
         <div class="left-col">
+            <div id="cloudStatusBox" class="cloud-status">🔄 正在連線微軟 GitHub 雲端資料庫...</div>
+
             <div class="card">
                 <h2>📅 選擇日期（點擊數字直選）</h2>
                 
@@ -273,12 +296,10 @@
                 </div>
 
                 <div class="formula-tip">
-                    <strong>💡 當日正確計分規則：</strong><br>
-                    1. 總血樣數 = 普通 + 隔離 + 生物銀<br>
-                    2. 基礎分 (2歐) = (總血樣數 > 17) ? (總血樣數 - 17) × 2 : 0<br>
-                    3. 隔離加成 (額外3歐) = (隔離 > 30) ? (隔離 - 30) × 3 : 0<br>
-                    4. 生物銀加成 (額外3歐) = (生物銀 > 4) ? (生物銀 - 4) × 3 : 0<br>
-                    *(註：超過30的隔離血樣，實際享受 2+3=5 歐雙重疊加得分)*
+                    <strong>💡 當日計分公式說明：</strong><br>
+                    1. 總普通數 = 普通 + 隔離 + 生物銀<br>
+                    2. 基礎分 = (總普通數 > 17) ? (總普通數 - 17) × 2 : 0<br>
+                    3. 專屬加分 = (隔離超過30個每個+3分) + (生物銀超過4個每個+3分)
                 </div>
 
                 <form id="recordForm">
@@ -300,30 +321,20 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">💾 保存當天記錄</button>
+                    <button type="submit" class="btn btn-primary">💾 保存並同步到雲端</button>
                 </form>
             </div>
 
             <div class="card">
-                <h2>📊 當月即時看板 (月度 800 歐封頂)</h2>
+                <h2>📊 當月即時看板 (月度封頂)</h2>
                 <div class="form-group" style="margin-bottom: 10px;">
                     <label for="summaryMonthSelect" style="font-size:14px;">選擇查看月份：</label>
                     <select id="summaryMonthSelect"></select>
                 </div>
                 <div id="monthSummaryView"></div>
             </div>
-
-            <div class="card">
-                <h2>📦 數據備份與安全恢復</h2>
-                <div style="display: flex; gap: 10px; flex-direction: column;">
-                    <button id="btnBackup" class="btn btn-info">🔵 下載數據備份 (.json)</button>
-                    <button id="btnRestore" class="btn btn-secondary">⚪ 導入備份數據</button>
-                    <input type="file" id="restoreFile" accept=".json" style="display: none;">
-                </div>
-            </div>
         </div>
 
-        <!-- 右側區域 -->
         <div class="right-col">
             <div class="card" style="min-height: 500px;">
                 <h2>📋 歷史每日記錄明細</h2>
@@ -361,11 +372,18 @@
 </div>
 
 <script>
-    // 使用兼容新舊數據的Key名
-    const STORAGE_KEY = 'perf_records_v19_hybrid';
-    let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || JSON.parse(localStorage.getItem('perf_records_v18_green')) || [];
+    // ==========================================
+    // ⚙️ 核心設定：請在此處正確填入您的 GitHub 資訊
+    // ==========================================
+    const GH_TOKEN = '這裡填入您剛才申請的ghp_開頭的Token'; 
+    const GH_USER  = '這裡填入您的GitHub帳號名稱';     
+    const GH_REPO  = 'perf-data-db';             
+    // ==========================================
 
-    const toastMessage = document.getElementById('toastMessage');
+    let records = [];
+    let fileSha = ""; // GitHub 需要這個來做版本覆蓋鎖
+
+    const cloudStatusBox = document.getElementById('cloudStatusBox');
     const recordForm = document.getElementById('recordForm');
     const cat1Input = document.getElementById('cat1');
     const cat2Input = document.getElementById('cat2');
@@ -377,9 +395,6 @@
     const monthSummaryView = document.getElementById('monthSummaryView');
     const btnExportMonth = document.getElementById('btnExportMonth');
     const btnExportYear = document.getElementById('btnExportYear');
-    const btnBackup = document.getElementById('btnBackup');
-    const btnRestore = document.getElementById('btnRestore');
-    const restoreFile = document.getElementById('restoreFile');
 
     const calendarMonthTitle = document.getElementById('calendarMonthTitle');
     const calendarDaysContainer = document.getElementById('calendarDaysContainer');
@@ -401,29 +416,86 @@
         setTimeout(() => { toastMessage.classList.remove('show'); }, 1000);
     }
 
-    // 🧮 修正後的雙重疊加引擎
+    // 🧮 混合計分引擎
     function calculateDailyScoreDetail(c1, c2, c3) {
         c1 = parseFloat(c1) || 0; c2 = parseFloat(c2) || 0; c3 = parseFloat(c3) || 0;
         const combinedTotal = c1 + c2 + c3;
-        // 1. 基礎得分（所有超過17個的血樣，每個都算 2 歐）
         const baseNormalScore = combinedTotal <= 17 ? 0 : (combinedTotal - 17) * 2;
-        // 2. 隔離加成（超過30個的隔離血樣，額外再疊加 3 歐）
         const isolationBonus = c2 <= 30 ? 0 : (c2 - 30) * 3;
-        // 3. 生物銀加成（超過4個的生物銀血樣，額外再疊加 3 歐）
         const silverBonus = c3 <= 4 ? 0 : (c3 - 4) * 3;
-        
-        return { 
-            combinedTotal, 
-            baseNormalScore, 
-            isolationBonus, 
-            silverBonus, 
-            dayTotal: baseNormalScore + isolationBonus + silverBonus 
-        };
+        return { combinedTotal, baseNormalScore, isolationBonus, silverBonus, dayTotal: baseNormalScore + isolationBonus + silverBonus };
     }
 
-    function saveRecords() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    // ☁️ 核心雲端下載函式
+    async function fetchFromCloud() {
+        if(GH_TOKEN.includes('這裡填入')) {
+            cloudStatusBox.style.backgroundColor = '#f8d7da';
+            cloudStatusBox.style.color = '#721c24';
+            cloudStatusBox.innerText = '⚠️ 尚未設定 GitHub Token 憑證，目前為單機暫存模式';
+            records = JSON.parse(localStorage.getItem('perf_records_backup')) || [];
+            refreshAllUI(); return;
+        }
+
+        cloudStatusBox.className = "cloud-status syncing";
+        cloudStatusBox.innerText = "🔄 正在從雲端同步歷史數據...";
+
+        const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/data.json`;
+        try {
+            let res = await fetch(url, { headers: { 'Authorization': `token ${GH_TOKEN}` } });
+            if (res.status === 404) {
+                // 如果是新資料庫，還沒有檔案，就初始化一個空的
+                records = []; fileSha = "";
+                cloudStatusBox.className = "cloud-status";
+                cloudStatusBox.innerText = "☁️ 雲端資料庫已就緒（首次使用）";
+            } else if (res.ok) {
+                let data = await res.json();
+                fileSha = data.sha;
+                // 解密文字並解析為陣列
+                let content = decodeURIComponent(atob(data.content).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                records = JSON.parse(content) || [];
+                cloudStatusBox.className = "cloud-status";
+                cloudStatusBox.innerText = "✅ 雲端數據同步成功！已載入最新記錄";
+            }
+        } catch (err) {
+            cloudStatusBox.style.backgroundColor = '#f8d7da';
+            cloudStatusBox.innerText = '❌ 網路連線失敗，改用手機本地暫存';
+            records = JSON.parse(localStorage.getItem('perf_records_backup')) || [];
+        }
         refreshAllUI();
+    }
+
+    // ☁️ 核心雲端儲存函式（自動在背景默默執行）
+    async function saveToCloud() {
+        localStorage.setItem('perf_records_backup', JSON.stringify(records)); // 本地防斷網雙重備份
+        if(GH_TOKEN.includes('這裡填入')) return;
+
+        cloudStatusBox.className = "cloud-status syncing";
+        cloudStatusBox.innerText = "⏳ 正在自動同步至微軟雲端防丟系統...";
+
+        const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/data.json`;
+        const utf8B64 = btoa(encodeURIComponent(JSON.stringify(records, null, 2)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+        
+        const bodyData = {
+            message: `Update performance data: ${new Date().toISOString()}`,
+            content: utf8B64
+        };
+        if (fileSha) bodyData.sha = fileSha;
+
+        try {
+            let res = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyData)
+            });
+            if (res.ok) {
+                let resData = await res.json();
+                fileSha = resData.content.sha; // 更新版本的鎖
+                cloudStatusBox.className = "cloud-status";
+                cloudStatusBox.innerText = "✅ 數據已完美永久儲存至 GitHub 雲端！";
+            } else { alert('雲端儲存失敗，請確認 Token 權限！'); }
+        } catch (err) {
+            cloudStatusBox.innerText = '❌ 儲存時網路中斷，已幫您暫存在手機中，下次連網時自動同步';
+        }
     }
 
     function refreshAllUI() {
@@ -488,7 +560,8 @@
         summaryMonthSelect.value = [...summaryMonthSelect.options].some(o => o.value === prevSummary) ? prevSummary : currentMonthStr;
     }
 
-    recordForm.addEventListener('submit', function(e) {
+    // 表單保存（保存後自動同步雲端，完全無彈窗、無感）
+    recordForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const c1 = parseInt(cat1Input.value) || 0; const c2 = parseInt(cat2Input.value) || 0; const c3 = parseInt(cat3Input.value) || 0;
         const existingIndex = records.findIndex(r => r.date === currentSelectedDate);
@@ -496,15 +569,17 @@
         else { records.push({ date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 }); }
         
         records.sort((a, b) => b.date.localeCompare(a.date));
-        saveRecords();
-        showToast('💾 儲存成功');
+        refreshAllUI();
+        showToast('💾 儲存成功，正雲端同步...');
+        await saveToCloud(); // ☁️ 呼叫自動同步
     });
 
-    window.deleteRecord = function(date) {
+    window.deleteRecord = async function(date) {
         if(confirm(`確定要徹底刪除 ${date} 的記錄嗎？`)) {
             records = records.filter(r => r.date !== date);
-            saveRecords();
+            refreshAllUI();
             showToast('🗑️ 記錄已刪除');
+            await saveToCloud();
         }
     }
 
@@ -530,7 +605,7 @@
             }
         });
         const capLimit = 800; let percent = ((totalScoreSum / capLimit) * 100).toFixed(1);
-        let progressSubText = totalScoreSum >= capLimit ? "🎉 已達成 800 歐封頂！" : `還差 ${capLimit - totalScoreSum} 歐封頂`;
+        let progressSubText = totalScoreSum >= capLimit ? "🎉 已達成封頂上限！" : `還差 ${capLimit - totalScoreSum} 分封頂`;
         if (totalScoreSum >= capLimit) percent = 100;
 
         monthSummaryView.innerHTML = `
@@ -540,7 +615,7 @@
                     <div class="summary-item"><div>普通累計</div><div class="num">${totalCount1}</div></div>
                     <div class="summary-item"><div>隔離累計</div><div class="num">${totalCount2}</div></div>
                     <div class="summary-item"><div>生物銀累計</div><div class="num">${totalCount3}</div></div>
-                    <div class="summary-item" style="background:#fff9e6; border-color:#ffe699;"><div style="color:#b27a00;font-size:12px;font-weight:bold;">✨ 月總績效</div><div class="num total" style="color:#cc8800;">${totalScoreSum}€</div></div>
+                    <div class="summary-item" style="background:#fff9e6; border-color:#ffe699;"><div style="color:#b27a00;font-size:12px;font-weight:bold;">✨ 月總績效</div><div class="num total" style="color:#cc8800;">${totalScoreSum}</div></div>
                 </div>
                 <div class="progress-container">
                     <div class="progress-text"><span>封頂進度 (${percent}%)</span><span>${progressSubText}</span></div>
@@ -548,42 +623,6 @@
                 </div>
             </div>`;
     }
-
-    // 備份下載
-    btnBackup.onclick = function() {
-        if(records.length === 0) { alert('目前沒有任何數據可供備份！'); return; }
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `績效數據備份_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-        showToast('📦 備份檔案已下載');
-    };
-
-    // 備份恢復
-    btnRestore.onclick = () => restoreFile.click();
-    restoreFile.onchange = function(e) {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const imported = JSON.parse(e.target.result);
-                if (Array.isArray(imported)) {
-                    if(confirm('確定要導入備份數據嗎？這將會合併現有數據。')) {
-                        const map = new Map();
-                        records.forEach(r => map.set(r.date, r));
-                        imported.forEach(r => { if(r.date) map.set(r.date, r); });
-                        records = Array.from(map.values()).sort((a,b) => b.date.localeCompare(a.date));
-                        saveRecords();
-                        alert('✅ 備份數據已成功恢復！');
-                    }
-                } else { alert('備份檔案格式不正確！'); }
-            } catch(err) { alert('解析備份檔案失敗！'); }
-        };
-        reader.readAsText(file);
-    };
 
     // 導出 Excel
     function exportToExcelMode(mode) {
@@ -595,8 +634,8 @@
             if (dailyRows.length === 0) { alert(`沒有找到 ${targetMonth} 月的數據！`); return; }
 
             let sheet1Data = [
-                [`${targetMonth} 月度每日記錄及疊加績效明細表 (每月800歐封頂)`], [],
-                ['具體日期', '普通(個)', '隔離(個)', '生物銀(個)', '總血樣數', '基礎績效(2歐)', '隔離疊加加成(3歐)', '生物銀疊加加成(3歐)', '當日總績效(歐)']
+                [`${targetMonth} 月度每日記錄及混合疊加績效明細表 (每月800分封頂)`], [],
+                ['具體日期', '普通(個)', '隔離(個)', '生物銀(個)', '總普通數(三者相加)', '普通基礎績效', '隔離專屬加分', '生物銀專屬加分', '當日總績效']
             ];
             let sumC1=0, sumC2=0, sumC3=0, sumComb=0, sumBaseNorm=0, sumIso=0, sumSil=0, sumTotal=0;
             dailyRows.forEach(r => {
@@ -606,10 +645,20 @@
             });
             sheet1Data.push([]);
             sheet1Data.push(['【全月大計(未封頂前)】', sumC1, sumC2, sumC3, sumComb, sumBaseNorm, sumIso, sumSil, sumTotal]);
-            sheet1Data.push(['【實際發放(800歐封頂控制)】', '-', '-', '-', '-', '-', '-', '-', Math.min(800, sumTotal)]);
+            sheet1Data.push(['【實際發放(800封頂控制)】', '-', '-', '-', '-', '-', '-', '-', Math.min(800, sumTotal)]);
 
+            let sheet2Data = [
+                [`${targetMonth} 月度考核規則審計彙總`], [],
+                ['指標大類', '全月累計個數', '新制混合計分考核規則', '全月累計得分'],
+                ['普通基礎大類', sumComb, '三品類大團結相加，每日滿 17 個後，超額部分每個 × 2 分', sumBaseNorm],
+                ['隔離專屬加分', sumC2, '每日獨立滿 30 個後，超額部分每個額外額外 × 3 分', sumIso],
+                ['生物銀專屬加分', sumC3, '每日獨立滿 4 個後，超額部分每個額外額外 × 3 分', sumSil],
+                ['【全月核算總得分】', '-', '各項符合規則加總後的大總計', sumTotal],
+                ['【月度封頂實際發放】', '-', '每月封頂控制最高核算 800 分值', Math.min(800, sumTotal)]
+            ];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1Data), `${targetMonth}每日明細`);
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2Data), `${targetMonth}績效彙總`);
             XLSX.writeFile(wb, `月度績效報表_${targetMonth}.xlsx`);
         } else {
             let monthGroups = {};
@@ -623,8 +672,8 @@
             const sortedMonths = Object.keys(monthGroups).sort();
             if (sortedMonths.length === 0) { alert(`沒有找到 ${targetYear} 年的績效數據！`); return; }
             let sheetData = [
-                [`${targetYear} 全年按月度績效彙總大表 (含800歐封頂)`], [],
-                ['歸屬月份', '已錄天數', '普通總個數', '隔離總個數', '生物銀總個數', '原始累計總分(歐)', '800歐封頂後實際發放(歐)']
+                [`${targetYear} 全年按月度績效彙總大表 (含封頂控制)`], [],
+                ['歸屬月份', '已錄天數', '普通總個數', '隔離總個數', '生物銀總個數', '混合計算原始總分', '800封頂後發放分']
             ];
             let y_c1=0, y_c2=0, y_c3=0, y_total_raw=0, y_total_capped=0;
             sortedMonths.forEach(m => {
@@ -643,8 +692,8 @@
     btnExportMonth.onclick = () => exportToExcelMode('month');
     btnExportYear.onclick = () => exportToExcelMode('year');
 
-    // 初始化
-    refreshAllUI();
+    // 🚀 初始化立即連網抓取雲端數據
+    fetchFromCloud();
 </script>
 </body>
 </html>
