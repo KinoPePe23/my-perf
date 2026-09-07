@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>個人績效每日記錄與雲端統計系統</title>
+    <title>個人績效每日記錄與統計系統</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -43,28 +43,6 @@
         }
 
         header h1 { color: var(--primary-color); font-size: 24px; margin-bottom: 5px; }
-
-        /* ☁️ 雲端狀態列樣式 */
-        .cloud-status {
-            background-color: #e2f4e9;
-            border: 1px solid #a3cfb6;
-            color: #155724;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        .cloud-status.syncing {
-            background-color: #fff3cd;
-            border-color: #ffeeba;
-            color: #856404;
-        }
 
         .main-layout { display: block; }
         
@@ -108,6 +86,7 @@
             outline: none;
         }
 
+        /* 📊 新增公式提示框樣式 */
         .formula-tip {
             background-color: #e8f3ff;
             border-left: 4px solid var(--primary-color);
@@ -119,7 +98,7 @@
             line-height: 1.4;
         }
 
-        /* 📅 日曆 */
+        /* 📅 網頁內嵌平鋪式日曆組件樣式 */
         .inline-calendar {
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -171,9 +150,17 @@
         }
         .calendar-day.empty { background: transparent; cursor: default; }
         .calendar-day:not(.empty):active { background: #dcdfe6; }
-        .calendar-day.today { border: 2px solid var(--info-color); }
-        .calendar-day.selected { background-color: var(--primary-color) !important; color: #fff !important; }
-        .calendar-day.has-data { background-color: #e8f3ff; color: var(--primary-color); }
+        .calendar-day.today {
+            border: 2px solid var(--info-color);
+        }
+        .calendar-day.selected {
+            background-color: var(--primary-color) !important;
+            color: #fff !important;
+        }
+        .calendar-day.has-data {
+            background-color: #e8f3ff;
+            color: var(--primary-color);
+        }
 
         .input-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .input-row span { display: block; text-align: center; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
@@ -211,12 +198,21 @@
         .btn-sm { padding: 10px 15px; font-size: 15px; width: auto; }
 
         .table-container { overflow-x: auto; margin-top: 10px; }
+
         table { width: 100%; border-collapse: collapse; font-size: 16px; }
+
         th, td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); text-align: left; }
         th { background-color: #f8f9fa; font-weight: bold; }
 
         .actions-cell { display: flex; gap: 8px; }
-        .btn-text-danger { color: var(--danger-color); background: none; border: none; cursor: pointer; font-size: 15px; font-weight: bold; }
+        .btn-text-danger {
+            color: var(--danger-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
 
         .summary-box {
             background-color: #f8f9fa;
@@ -240,10 +236,38 @@
             border-radius: 6px;
             border: 1px solid #e9ecef;
         }
-        .progress-text { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-bottom: 6px; color: #555; }
-        .progress-bar-bg { width: 100%; height: 16px; background-color: #e9ecef; border-radius: 8px; overflow: hidden; position: relative; }
-        .progress-bar-fill { height: 100%; width: 0%; background-color: #2b579a; transition: width 0.3s ease; }
-        .progress-bar-fill.capped { background-color: #ff9800; }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #555;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 16px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #2b579a;
+            transition: width 0.3s ease;
+        }
+        .progress-bar-fill.capped {
+            background-color: #ff9800;
+        }
+
+        .backup-zone {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .backup-zone .btn { padding: 10px; font-size: 14px; flex: 1; }
 
         .toast {
             position: fixed;
@@ -273,13 +297,11 @@
 <div class="container">
     <header>
         <h1>個人績效每日記錄與統計系統</h1>
-        <p>📋 ☁️ 數據實時雲端無感自動同步 • 終身防丟失免費版</p>
+        <p>📋 點擊數字直接選取 • 免確認無彈窗干擾 • 疊加累計混合計分 • 月度800封頂</p>
     </header>
 
     <div class="main-layout">
         <div class="left-col">
-            <div id="cloudStatusBox" class="cloud-status">🔄 正在連線微軟 GitHub 雲端資料庫...</div>
-
             <div class="card">
                 <h2>📅 選擇日期（點擊數字直選）</h2>
                 
@@ -321,7 +343,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">💾 保存並同步到雲端</button>
+                    <button type="submit" class="btn btn-primary">💾 保存/更新此日記錄</button>
                 </form>
             </div>
 
@@ -332,6 +354,16 @@
                     <select id="summaryMonthSelect"></select>
                 </div>
                 <div id="monthSummaryView"></div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ 系統數據備份</h2>
+                <p style="font-size: 13px; color: #666; margin-bottom: 10px;">防範 GitHub 或瀏覽器清理快取，建議定期下載備份文件。</p>
+                <div class="backup-zone">
+                    <button id="btnDownloadBackup" class="btn btn-info">🔵 下載數據備份</button>
+                    <button id="btnTriggerImport" class="btn btn-secondary">⚪ 導入備份數據</button>
+                </div>
+                <input type="file" id="fileImportInput" accept=".json" style="display: none;">
             </div>
         </div>
 
@@ -372,18 +404,9 @@
 </div>
 
 <script>
-    // ==========================================
-    // ⚙️ 核心設定：請在此處正確填入您的 GitHub 資訊
-    // ==========================================
-    const GH_TOKEN = '這裡填入您剛才申請的ghp_開頭的Token'; 
-    const GH_USER  = '這裡填入您的GitHub帳號名稱';     
-    const GH_REPO  = 'perf-data-db';             
-    // ==========================================
+    // 數據存儲（採用全新的儲存鍵名，確保乾淨且不衝突）
+    let records = JSON.parse(localStorage.getItem('perf_records_v19_hybrid')) || [];
 
-    let records = [];
-    let fileSha = ""; // GitHub 需要這個來做版本覆蓋鎖
-
-    const cloudStatusBox = document.getElementById('cloudStatusBox');
     const recordForm = document.getElementById('recordForm');
     const cat1Input = document.getElementById('cat1');
     const cat2Input = document.getElementById('cat2');
@@ -395,12 +418,17 @@
     const monthSummaryView = document.getElementById('monthSummaryView');
     const btnExportMonth = document.getElementById('btnExportMonth');
     const btnExportYear = document.getElementById('btnExportYear');
+    const btnDownloadBackup = document.getElementById('btnDownloadBackup');
+    const btnTriggerImport = document.getElementById('btnTriggerImport');
+    const fileImportInput = document.getElementById('fileImportInput');
+    const toastMessage = document.getElementById('toastMessage');
 
     const calendarMonthTitle = document.getElementById('calendarMonthTitle');
     const calendarDaysContainer = document.getElementById('calendarDaysContainer');
     const prevMonthBtn = document.getElementById('prevMonthBtn');
     const nextMonthBtn = document.getElementById('nextMonthBtn');
 
+    // 狀態管理初始化
     let currentSelectedDate = ""; 
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth(); 
@@ -416,130 +444,98 @@
         setTimeout(() => { toastMessage.classList.remove('show'); }, 1000);
     }
 
-    // 🧮 混合計分引擎
+    // 🧮 核心升級：全新混合疊加計分引擎
     function calculateDailyScoreDetail(c1, c2, c3) {
-        c1 = parseFloat(c1) || 0; c2 = parseFloat(c2) || 0; c3 = parseFloat(c3) || 0;
+        c1 = parseFloat(c1) || 0;
+        c2 = parseFloat(c2) || 0;
+        c3 = parseFloat(c3) || 0;
+
+        // 1. 隔離和生物銀無條件全部疊加到「普通總數」中
         const combinedTotal = c1 + c2 + c3;
-        const baseNormalScore = combinedTotal <= 17 ? 0 : (combinedTotal - 17) * 2;
-        const isolationBonus = c2 <= 30 ? 0 : (c2 - 30) * 3;
-        const silverBonus = c3 <= 4 ? 0 : (c3 - 4) * 3;
-        return { combinedTotal, baseNormalScore, isolationBonus, silverBonus, dayTotal: baseNormalScore + isolationBonus + silverBonus };
-    }
-
-    // ☁️ 核心雲端下載函式
-    async function fetchFromCloud() {
-        if(GH_TOKEN.includes('這裡填入')) {
-            cloudStatusBox.style.backgroundColor = '#f8d7da';
-            cloudStatusBox.style.color = '#721c24';
-            cloudStatusBox.innerText = '⚠️ 尚未設定 GitHub Token 憑證，目前為單機暫存模式';
-            records = JSON.parse(localStorage.getItem('perf_records_backup')) || [];
-            refreshAllUI(); return;
-        }
-
-        cloudStatusBox.className = "cloud-status syncing";
-        cloudStatusBox.innerText = "🔄 正在從雲端同步歷史數據...";
-
-        const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/data.json`;
-        try {
-            let res = await fetch(url, { headers: { 'Authorization': `token ${GH_TOKEN}` } });
-            if (res.status === 404) {
-                // 如果是新資料庫，還沒有檔案，就初始化一個空的
-                records = []; fileSha = "";
-                cloudStatusBox.className = "cloud-status";
-                cloudStatusBox.innerText = "☁️ 雲端資料庫已就緒（首次使用）";
-            } else if (res.ok) {
-                let data = await res.json();
-                fileSha = data.sha;
-                // 解密文字並解析為陣列
-                let content = decodeURIComponent(atob(data.content).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                records = JSON.parse(content) || [];
-                cloudStatusBox.className = "cloud-status";
-                cloudStatusBox.innerText = "✅ 雲端數據同步成功！已載入最新記錄";
-            }
-        } catch (err) {
-            cloudStatusBox.style.backgroundColor = '#f8d7da';
-            cloudStatusBox.innerText = '❌ 網路連線失敗，改用手機本地暫存';
-            records = JSON.parse(localStorage.getItem('perf_records_backup')) || [];
-        }
-        refreshAllUI();
-    }
-
-    // ☁️ 核心雲端儲存函式（自動在背景默默執行）
-    async function saveToCloud() {
-        localStorage.setItem('perf_records_backup', JSON.stringify(records)); // 本地防斷網雙重備份
-        if(GH_TOKEN.includes('這裡填入')) return;
-
-        cloudStatusBox.className = "cloud-status syncing";
-        cloudStatusBox.innerText = "⏳ 正在自動同步至微軟雲端防丟系統...";
-
-        const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/data.json`;
-        const utf8B64 = btoa(encodeURIComponent(JSON.stringify(records, null, 2)).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
         
-        const bodyData = {
-            message: `Update performance data: ${new Date().toISOString()}`,
-            content: utf8B64
+        // 2. 計算普通基礎分（門檻 17，超過每個 2 分）
+        const baseNormalScore = combinedTotal <= 17 ? 0 : (combinedTotal - 17) * 2;
+
+        // 3. 計算隔離專屬加分（門檻 30，超過每個額外 3 分）
+        const isolationBonus = c2 <= 30 ? 0 : (c2 - 30) * 3;
+
+        // 4. 計算生物銀專屬加分（門檻 4，超過每個額外 3 分）
+        const silverBonus = c3 <= 4 ? 0 : (c3 - 4) * 3;
+
+        // 當日大總計
+        const dayTotal = baseNormalScore + isolationBonus + silverBonus;
+
+        return {
+            combinedTotal: combinedTotal,
+            baseNormalScore: baseNormalScore,
+            isolationBonus: isolationBonus,
+            silverBonus: silverBonus,
+            dayTotal: dayTotal
         };
-        if (fileSha) bodyData.sha = fileSha;
-
-        try {
-            let res = await fetch(url, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${GH_TOKEN}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(bodyData)
-            });
-            if (res.ok) {
-                let resData = await res.json();
-                fileSha = resData.content.sha; // 更新版本的鎖
-                cloudStatusBox.className = "cloud-status";
-                cloudStatusBox.innerText = "✅ 數據已完美永久儲存至 GitHub 雲端！";
-            } else { alert('雲端儲存失敗，請確認 Token 權限！'); }
-        } catch (err) {
-            cloudStatusBox.innerText = '❌ 儲存時網路中斷，已幫您暫存在手機中，下次連網時自動同步';
-        }
-    }
-
-    function refreshAllUI() {
-        updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
     }
 
     // 日曆渲染
     function renderInlineCalendar() {
         calendarMonthTitle.innerText = `${calendarYear}年 ${calendarMonth + 1}月`;
         calendarDaysContainer.innerHTML = '';
+
         const firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
         const totalDays = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
         for (let i = 0; i < firstDayIndex; i++) {
-            const emptyDiv = document.createElement('div'); emptyDiv.className = 'calendar-day empty';
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'calendar-day empty';
             calendarDaysContainer.appendChild(emptyDiv);
         }
 
         const todayStr = new Date().toISOString().slice(0, 10);
         for (let day = 1; day <= totalDays; day++) {
-            const dayDiv = document.createElement('div'); dayDiv.className = 'calendar-day'; dayDiv.innerText = day;
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'calendar-day';
+            dayDiv.innerText = day;
+
             const thisDateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             
             if (thisDateStr === todayStr) dayDiv.classList.add('today');
-            if (records.some(r => r.date === thisDateStr)) dayDiv.classList.add('has-data');
+
+            const hasData = records.some(r => r.date === thisDateStr);
+            if (hasData) dayDiv.classList.add('has-data');
+
             if (thisDateStr === currentSelectedDate) dayDiv.classList.add('selected');
 
             dayDiv.onclick = function() {
-                currentSelectedDate = thisDateStr; syncInputsFromDate(); renderInlineCalendar(); 
+                currentSelectedDate = thisDateStr;
+                syncInputsFromDate();
+                renderInlineCalendar(); 
             };
+
             calendarDaysContainer.appendChild(dayDiv);
         }
     }
 
-    prevMonthBtn.onclick = function() { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderInlineCalendar(); };
-    nextMonthBtn.onclick = function() { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderInlineCalendar(); };
+    prevMonthBtn.onclick = function() {
+        calendarMonth--;
+        if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+        renderInlineCalendar();
+    };
+
+    nextMonthBtn.onclick = function() {
+        calendarMonth++;
+        if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+        renderInlineCalendar();
+    };
 
     function syncInputsFromDate() {
         const existing = records.find(r => r.date === currentSelectedDate);
         if (existing) {
-            cat1Input.value = existing.cat1; cat2Input.value = existing.cat2; cat3Input.value = existing.cat3;
-            inputSectionTitle.innerHTML = `📝 修改 <span style="color:var(--danger-color); font-weight:bold;">${currentSelectedDate}</span> 的數據`;
+            cat1Input.value = existing.cat1;
+            cat2Input.value = existing.cat2;
+            cat3Input.value = existing.cat3;
+            inputSectionTitle.innerHTML = `📝 修改 <span style="color:var(--danger-color); font-weight:bold;">${currentSelectedDate}</span> 的已有數據`;
         } else {
-            cat1Input.value = 0; cat2Input.value = 0; cat3Input.value = 0;
+            cat1Input.value = 0;
+            cat2Input.value = 0;
+            cat3Input.value = 0;
             inputSectionTitle.innerHTML = `✨ 錄入 <span style="color:var(--primary-color); font-weight:bold;">${currentSelectedDate}</span> 的新數據`;
         }
     }
@@ -548,65 +544,108 @@
         const months = new Set();
         const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         months.add(currentMonthStr);
+
         records.forEach(r => { if (r.date) months.add(r.date.substring(0, 7)); });
         const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-        const prevFilter = filterMonthSelect.value; const prevSummary = summaryMonthSelect.value;
-        filterMonthSelect.innerHTML = '<option value="all">查看全部歷史明細</option>'; summaryMonthSelect.innerHTML = '';
+
+        const prevFilter = filterMonthSelect.value;
+        const prevSummary = summaryMonthSelect.value;
+
+        filterMonthSelect.innerHTML = '<option value="all">查看全部歷史明細</option>';
+        summaryMonthSelect.innerHTML = '';
+
         sortedMonths.forEach(m => {
             filterMonthSelect.innerHTML += `<option value="${m}">${m} 月明細</option>`;
             summaryMonthSelect.innerHTML += `<option value="${m}">${m} 月</option>`;
         });
+
         filterMonthSelect.value = [...filterMonthSelect.options].some(o => o.value === prevFilter) ? prevFilter : currentMonthStr;
         summaryMonthSelect.value = [...summaryMonthSelect.options].some(o => o.value === prevSummary) ? prevSummary : currentMonthStr;
     }
 
-    // 表單保存（保存後自動同步雲端，完全無彈窗、無感）
-    recordForm.addEventListener('submit', async function(e) {
+    recordForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        const c1 = parseInt(cat1Input.value) || 0; const c2 = parseInt(cat2Input.value) || 0; const c3 = parseInt(cat3Input.value) || 0;
+        const c1 = parseInt(cat1Input.value) || 0;
+        const c2 = parseInt(cat2Input.value) || 0;
+        const c3 = parseInt(cat3Input.value) || 0;
+
         const existingIndex = records.findIndex(r => r.date === currentSelectedDate);
-        if (existingIndex > -1) { records[existingIndex] = { date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 }; } 
-        else { records.push({ date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 }); }
-        
+        if (existingIndex > -1) {
+            records[existingIndex] = { date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 };
+        } else {
+            records.push({ date: currentSelectedDate, cat1: c1, cat2: c2, cat3: c3 });
+        }
+
         records.sort((a, b) => b.date.localeCompare(a.date));
-        refreshAllUI();
-        showToast('💾 儲存成功，正雲端同步...');
-        await saveToCloud(); // ☁️ 呼叫自動同步
+        localStorage.setItem('perf_records_v19_hybrid', JSON.stringify(records));
+
+        updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
+        showToast('💾 數據儲存成功！');
     });
 
-    window.deleteRecord = async function(date) {
+    window.deleteRecord = function(date) {
         if(confirm(`確定要徹底刪除 ${date} 的記錄嗎？`)) {
             records = records.filter(r => r.date !== date);
-            refreshAllUI();
+            localStorage.setItem('perf_records_v19_hybrid', JSON.stringify(records));
+            updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
             showToast('🗑️ 記錄已刪除');
-            await saveToCloud();
         }
     }
 
     function renderTable() {
-        const filterVal = filterMonthSelect.value; recordsTbody.innerHTML = '';
+        const filterVal = filterMonthSelect.value;
+        recordsTbody.innerHTML = '';
         const filtered = records.filter(r => filterVal === 'all' || r.date.startsWith(filterVal));
+
         if(filtered.length === 0) {
-            recordsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding:30px;">暫無明細記錄</td></tr>`; return;
+            recordsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999; padding:30px;">暫無明細記錄</td></tr>`;
+            return;
         }
+
         filtered.forEach(r => {
-            recordsTbody.innerHTML += `<tr><td><strong>${r.date}</strong></td><td>${r.cat1} 個</td><td>${r.cat2} 個</td><td>${r.cat3} 個</td><td class="actions-cell"><button class="btn-text-danger" onclick="deleteRecord('${r.date}')">刪除</button></td></tr>`;
+            recordsTbody.innerHTML += `
+                <tr>
+                    <td><strong>${r.date}</strong></td>
+                    <td>${r.cat1} 個</td>
+                    <td>${r.cat2} 個</td>
+                    <td>${r.cat3} 個</td>
+                    <td class="actions-cell"><button class="btn-text-danger" onclick="deleteRecord('${r.date}')">刪除</button></td>
+                </tr>
+            `;
         });
     }
 
     function renderSummary() {
         const targetMonth = summaryMonthSelect.value; if (!targetMonth) return;
-        let totalCount1 = 0, totalCount2 = 0, totalCount3 = 0, totalScoreSum = 0, days = 0;
+        let totalCount1 = 0, totalCount2 = 0, totalCount3 = 0;
+        let totalScoreSum = 0;
+        let days = 0;
+
         records.forEach(r => {
             if(r.date && r.date.startsWith(targetMonth)) {
-                totalCount1 += r.cat1; totalCount2 += r.cat2; totalCount3 += r.cat3;
+                totalCount1 += r.cat1;
+                totalCount2 += r.cat2;
+                totalCount3 += r.cat3;
+                
+                // 採用最新算法累加月總績效
                 let res = calculateDailyScoreDetail(r.cat1, r.cat2, r.cat3);
-                totalScoreSum += res.dayTotal; days++;
+                totalScoreSum += res.dayTotal;
+                days++;
             }
         });
-        const capLimit = 800; let percent = ((totalScoreSum / capLimit) * 100).toFixed(1);
-        let progressSubText = totalScoreSum >= capLimit ? "🎉 已達成封頂上限！" : `還差 ${capLimit - totalScoreSum} 分封頂`;
-        if (totalScoreSum >= capLimit) percent = 100;
+
+        const capLimit = 800;
+        let percent = ((totalScoreSum / capLimit) * 100).toFixed(1);
+        let progressSubText = "";
+        let isCappedClass = "";
+
+        if (totalScoreSum >= capLimit) {
+            percent = 100;
+            progressSubText = "🎉 已達成封頂上限！";
+            isCappedClass = "capped";
+        } else {
+            progressSubText = `還差 ${capLimit - totalScoreSum} 分封頂`;
+        }
 
         monthSummaryView.innerHTML = `
             <div class="summary-box">
@@ -617,38 +656,58 @@
                     <div class="summary-item"><div>生物銀累計</div><div class="num">${totalCount3}</div></div>
                     <div class="summary-item" style="background:#fff9e6; border-color:#ffe699;"><div style="color:#b27a00;font-size:12px;font-weight:bold;">✨ 月總績效</div><div class="num total" style="color:#cc8800;">${totalScoreSum}</div></div>
                 </div>
+
                 <div class="progress-container">
-                    <div class="progress-text"><span>封頂進度 (${percent}%)</span><span>${progressSubText}</span></div>
-                    <div class="progress-bar-bg"><div class="progress-bar-fill ${totalScoreSum >= capLimit ? 'capped' : ''}" style="width: ${percent}%;"></div></div>
+                    <div class="progress-text">
+                        <span>封頂進度 (${percent}%)</span>
+                        <span>${progressSubText}</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill ${isCappedClass}" style="width: ${percent}%;"></div>
+                    </div>
                 </div>
             </div>`;
     }
 
-    // 導出 Excel
+    // 導出 Excel (包含完整複合拆解細節)
     function exportToExcelMode(mode) {
         if (records.length === 0) { alert('暫無任何績效數據可供導出！'); return; }
-        const targetMonth = summaryMonthSelect.value; const targetYear = targetMonth.substring(0, 4);
+        const targetMonth = summaryMonthSelect.value;
+        const targetYear = targetMonth.substring(0, 4);
 
         if (mode === 'month') {
             const dailyRows = records.filter(r => r.date.startsWith(targetMonth)).sort((a,b) => a.date.localeCompare(b.date));
             if (dailyRows.length === 0) { alert(`沒有找到 ${targetMonth} 月的數據！`); return; }
 
             let sheet1Data = [
-                [`${targetMonth} 月度每日記錄及混合疊加績效明細表 (每月800分封頂)`], [],
+                [`${targetMonth} 月度每日記錄及混合疊加績效明細表 (每月800分封頂)`],
+                [],
                 ['具體日期', '普通(個)', '隔離(個)', '生物銀(個)', '總普通數(三者相加)', '普通基礎績效', '隔離專屬加分', '生物銀專屬加分', '當日總績效']
             ];
+
             let sumC1=0, sumC2=0, sumC3=0, sumComb=0, sumBaseNorm=0, sumIso=0, sumSil=0, sumTotal=0;
+
             dailyRows.forEach(r => {
                 let res = calculateDailyScoreDetail(r.cat1, r.cat2, r.cat3);
-                sheet1Data.push([r.date, r.cat1, r.cat2, r.cat3, res.combinedTotal, res.baseNormalScore, res.isolationBonus, res.silverBonus, res.dayTotal]);
-                sumC1 += r.cat1; sumC2 += r.cat2; sumC3 += r.cat3; sumComb += res.combinedTotal; sumBaseNorm += res.baseNormalScore; sumIso += res.isolationBonus; sumSil += res.silverBonus; sumTotal += res.dayTotal;
+
+                sheet1Data.push([
+                    r.date, r.cat1, r.cat2, r.cat3, 
+                    res.combinedTotal, res.baseNormalScore, res.isolationBonus, res.silverBonus, res.dayTotal
+                ]);
+
+                sumC1 += r.cat1; sumC2 += r.cat2; sumC3 += r.cat3;
+                sumComb += res.combinedTotal; sumBaseNorm += res.baseNormalScore;
+                sumIso += res.isolationBonus; sumSil += res.silverBonus;
+                sumTotal += res.dayTotal;
             });
+
             sheet1Data.push([]);
             sheet1Data.push(['【全月大計(未封頂前)】', sumC1, sumC2, sumC3, sumComb, sumBaseNorm, sumIso, sumSil, sumTotal]);
             sheet1Data.push(['【實際發放(800封頂控制)】', '-', '-', '-', '-', '-', '-', '-', Math.min(800, sumTotal)]);
 
             let sheet2Data = [
-                [`${targetMonth} 月度考核規則審計彙總`], [],
+                [`${targetMonth} 月度考核規則審計彙總`],
+                [],
                 ['指標大類', '全月累計個數', '新制混合計分考核規則', '全月累計得分'],
                 ['普通基礎大類', sumComb, '三品類大團結相加，每日滿 17 個後，超額部分每個 × 2 分', sumBaseNorm],
                 ['隔離專屬加分', sumC2, '每日獨立滿 30 個後，超額部分每個額外額外 × 3 分', sumIso],
@@ -656,44 +715,104 @@
                 ['【全月核算總得分】', '-', '各項符合規則加總後的大總計', sumTotal],
                 ['【月度封頂實際發放】', '-', '每月封頂控制最高核算 800 分值', Math.min(800, sumTotal)]
             ];
+
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1Data), `${targetMonth}每日明細`);
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2Data), `${targetMonth}績效彙總`);
-            XLSX.writeFile(wb, `月度績效報表_${targetMonth}.xlsx`);
+            XLSX.writeFile(wb, `升級版月度績效報表_${targetMonth}.xlsx`);
+
         } else {
             let monthGroups = {};
             records.forEach(r => {
                 if(r.date && r.date.startsWith(targetYear)) {
-                    const m = r.date.substring(0, 7); if (!monthGroups[m]) monthGroups[m] = { c1: 0, c2: 0, c3: 0, totalRaw: 0, days: 0 };
+                    const m = r.date.substring(0, 7);
+                    if (!monthGroups[m]) monthGroups[m] = { c1: 0, c2: 0, c3: 0, totalRaw: 0, days: 0 };
+                    
                     let res = calculateDailyScoreDetail(r.cat1, r.cat2, r.cat3);
-                    monthGroups[m].c1 += r.cat1; monthGroups[m].c2 += r.cat2; monthGroups[m].c3 += r.cat3; monthGroups[m].totalRaw += res.dayTotal; monthGroups[m].days++;
+                    monthGroups[m].c1 += r.cat1;
+                    monthGroups[m].c2 += r.cat2;
+                    monthGroups[m].c3 += r.cat3;
+                    monthGroups[m].totalRaw += res.dayTotal;
+                    monthGroups[m].days++;
                 }
             });
+
             const sortedMonths = Object.keys(monthGroups).sort();
             if (sortedMonths.length === 0) { alert(`沒有找到 ${targetYear} 年的績效數據！`); return; }
+
             let sheetData = [
-                [`${targetYear} 全年按月度績效彙總大表 (含封頂控制)`], [],
+                [`${targetYear} 全年按月度績效彙總大表 (含封頂控制)`],
+                [],
                 ['歸屬月份', '已錄天數', '普通總個數', '隔離總個數', '生物銀總個數', '混合計算原始總分', '800封頂後發放分']
             ];
+
             let y_c1=0, y_c2=0, y_c3=0, y_total_raw=0, y_total_capped=0;
+
             sortedMonths.forEach(m => {
-                const g = monthGroups[m]; const m_capped_score = Math.min(800, g.totalRaw);
+                const g = monthGroups[m];
+                const m_capped_score = Math.min(800, g.totalRaw);
+
                 sheetData.push([m, g.days + '天', g.c1, g.c2, g.c3, g.totalRaw, m_capped_score]);
-                y_c1+=g.c1; y_c2+=g.c2; y_c3+=g.c3; y_total_raw+=g.totalRaw; y_total_capped+=m_capped_score;
+
+                y_c1+=g.c1; y_c2+=g.c2; y_c3+=g.c3; 
+                y_total_raw+=g.totalRaw; y_total_capped+=m_capped_score;
             });
-            sheetData.push([]); sheetData.push(['【全年總累計】', '-', y_c1, y_c2, y_c3, y_total_raw, y_total_capped]);
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetData), `${targetYear}全年彙總`);
+
+            sheetData.push([]);
+            sheetData.push(['【全年總累計】', '-', y_c1, y_c2, y_c3, y_total_raw, y_total_capped]);
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetData), `${targetYear}全年彙總`);
             XLSX.writeFile(wb, `年度績效彙總表_${targetYear}.xlsx`);
         }
     }
+
+    // 備份下載
+    btnDownloadBackup.onclick = function() {
+        if (records.length === 0) { alert('當前沒有任何數據可供下載備份！'); return; }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `績效混合計分備份_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    };
+
+    // 備份導入
+    btnTriggerImport.onclick = () => fileImportInput.click();
+    fileImportInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const importedData = JSON.parse(evt.target.result);
+                if (Array.isArray(importedData)) {
+                    if (confirm(`讀取成功！檢測到 ${importedData.length} 條歷史記錄。確定要合併導入嗎？`)) {
+                        importedData.forEach(imp => {
+                            const idx = records.findIndex(r => r.date === imp.date);
+                            if (idx > -1) records[idx] = imp;
+                            else records.push(imp);
+                        });
+                        records.sort((a, b) => b.date.localeCompare(a.date));
+                        localStorage.setItem('perf_records_v19_hybrid', JSON.stringify(records));
+                        updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
+                        showToast('📥 備份導入成功！');
+                    }
+                } else { alert('文件格式不正確！'); }
+            } catch (err) { alert('導入失敗，請確認文件！'); }
+        };
+        reader.readAsText(file);
+    };
     
     filterMonthSelect.onchange = renderTable;
     summaryMonthSelect.onchange = renderSummary;
     btnExportMonth.onclick = () => exportToExcelMode('month');
     btnExportYear.onclick = () => exportToExcelMode('year');
 
-    // 🚀 初始化立即連網抓取雲端數據
-    fetchFromCloud();
+    // 初始化驅動
+    updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
 </script>
 </body>
 </html>
