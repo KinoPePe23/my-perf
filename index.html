@@ -1,4 +1,4 @@
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -97,6 +97,7 @@ html_content = """<!DOCTYPE html>
             line-height: 1.4;
         }
 
+        /* 📅 日曆 */
         .inline-calendar {
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -250,7 +251,7 @@ html_content = """<!DOCTYPE html>
 <div class="container">
     <header>
         <h1>個人績效每日記錄與統計系統</h1>
-        <p>📋 隔離/生物銀專屬加分雙重疊加版 (基礎2歐 + 特殊3歐)</p>
+        <p>📋 隔離加分雙重疊加版 (基礎2歐 + 超額3歐額外加成)</p>
     </header>
 
     <div class="main-layout">
@@ -277,7 +278,7 @@ html_content = """<!DOCTYPE html>
                     2. 基礎分 (2歐) = (總血樣數 > 17) ? (總血樣數 - 17) × 2 : 0<br>
                     3. 隔離加成 (額外3歐) = (隔離 > 30) ? (隔離 - 30) × 3 : 0<br>
                     4. 生物銀加成 (額外3歐) = (生物銀 > 4) ? (生物銀 - 4) × 3 : 0<br>
-                    *(註：超額的隔離/生物銀均享受 2+3=5 歐雙重疊加得分)*
+                    *(註：超過30的隔離血樣，實際享受 2+3=5 歐雙重疊加得分)*
                 </div>
 
                 <form id="recordForm">
@@ -360,6 +361,7 @@ html_content = """<!DOCTYPE html>
 </div>
 
 <script>
+    // 使用兼容新舊數據的Key名
     const STORAGE_KEY = 'perf_records_v19_hybrid';
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || JSON.parse(localStorage.getItem('perf_records_v18_green')) || [];
 
@@ -399,11 +401,15 @@ html_content = """<!DOCTYPE html>
         setTimeout(() => { toastMessage.classList.remove('show'); }, 1000);
     }
 
+    // 🧮 修正後的雙重疊加引擎
     function calculateDailyScoreDetail(c1, c2, c3) {
         c1 = parseFloat(c1) || 0; c2 = parseFloat(c2) || 0; c3 = parseFloat(c3) || 0;
         const combinedTotal = c1 + c2 + c3;
+        // 1. 基礎得分（所有超過17個的血樣，每個都算 2 歐）
         const baseNormalScore = combinedTotal <= 17 ? 0 : (combinedTotal - 17) * 2;
+        // 2. 隔離加成（超過30個的隔離血樣，額外再疊加 3 歐）
         const isolationBonus = c2 <= 30 ? 0 : (c2 - 30) * 3;
+        // 3. 生物銀加成（超過4個的生物銀血樣，額外再疊加 3 歐）
         const silverBonus = c3 <= 4 ? 0 : (c3 - 4) * 3;
         
         return { 
@@ -424,6 +430,7 @@ html_content = """<!DOCTYPE html>
         updateMonthOptions(); renderTable(); renderSummary(); syncInputsFromDate(); renderInlineCalendar();
     }
 
+    // 日曆渲染
     function renderInlineCalendar() {
         calendarMonthTitle.innerText = `${calendarYear}年 ${calendarMonth + 1}月`;
         calendarDaysContainer.innerHTML = '';
@@ -542,6 +549,7 @@ html_content = """<!DOCTYPE html>
             </div>`;
     }
 
+    // 備份下載
     btnBackup.onclick = function() {
         if(records.length === 0) { alert('目前沒有任何數據可供備份！'); return; }
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
@@ -554,6 +562,7 @@ html_content = """<!DOCTYPE html>
         showToast('📦 備份檔案已下載');
     };
 
+    // 備份恢復
     btnRestore.onclick = () => restoreFile.click();
     restoreFile.onchange = function(e) {
         const file = e.target.files[0]; if (!file) return;
@@ -576,6 +585,7 @@ html_content = """<!DOCTYPE html>
         reader.readAsText(file);
     };
 
+    // 導出 Excel
     function exportToExcelMode(mode) {
         if (records.length === 0) { alert('暫無任何績效數據可供導出！'); return; }
         const targetMonth = summaryMonthSelect.value; const targetYear = targetMonth.substring(0, 4);
@@ -633,8 +643,8 @@ html_content = """<!DOCTYPE html>
     btnExportMonth.onclick = () => exportToExcelMode('month');
     btnExportYear.onclick = () => exportToExcelMode('year');
 
+    // 初始化
     refreshAllUI();
 </script>
 </body>
-</html>"""
-
+</html>
